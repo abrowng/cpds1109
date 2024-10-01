@@ -17,13 +17,13 @@ char **argv;
 {
     int rank, value, size, errcnt, toterr, i, j;
     MPI_Status status;
-    //double x[maxn][maxn];
+    double x[maxn][maxn];
     double xlocal[(maxn/P)+2][maxn];
 
     MPI_Init( &argc, &argv );
 
-    MPI_Comm_rank(    ,     ); /* Statement S1 */
-    MPI_Comm_size(    ,     ); /* Statement S2 */
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     if (size != P) {
        printf("This program only works when run with %d processes. Aborting.\n", P);
@@ -59,17 +59,16 @@ char **argv;
     /* Receive from previous unless I'm the first process (rank==0)
        and store row in initial row (ghost area) */
     if (rank > 0)
-	MPI_Recv( xlocal[0], maxn , MPI_DOUBLE , rank - 1, 0,   , 
+	MPI_Recv( xlocal[0], maxn , MPI_DOUBLE , rank - 1, 0,   MPI_COMM_WORLD,
 		  &status ); /* Statement S3 */
 
     /* Send 1st local row to previous process unless I'm the 1st process */
-    if (rank > 0) 
-	MPI_Send( xlocal[1],   ,   , rank - 1, 1,    ); /* Statement S4 */
+    if (rank > 0)
+      MPI_Send( xlocal[1], maxn, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD );
     /* Receive from next process and store row in last row in xlocal
        (ghost area) unless I'm the last process */
-    if (rank < size - 1) 
-	MPI_Recv( xlocal[maxn/size+1],   ,   , rank + 1, 1,   
-		       , &status ); /* Statement S5 */
+    if (rank < size - 1)
+      MPI_Recv( xlocal[maxn/size+1], maxn, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD, &status);
 
     /* Check that we have the correct results after the communications */
     errcnt = 0;
@@ -85,7 +84,7 @@ char **argv;
     }
 
     /* Retrieve in process 0 the total number of errors */
-    MPI_Reduce( &errcnt, &toterr,  ,  ,  ,  ,   ); /* Statement S6 */
+    MPI_Reduce( &errcnt, &toterr, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD );
     if (rank == 0) {
 	if (toterr)
 	    printf( "ERROR: found %d errors\n", toterr );
