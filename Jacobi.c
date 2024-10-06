@@ -59,7 +59,7 @@ char **argv;
     /* Note that we use MPI_PROC_NULL to remove the if statements that
        would be needed without MPI_PROC_NULL */
     next_nbr = rank + 1;
-    if (next_nbr >= size) next_nbr =            ; /* Statement S13 */
+    if (next_nbr >= size) next_nbr = MPI_PROC_NULL; /* Statement S13 */
     prev_nbr = rank - 1;
     if (prev_nbr < 0) prev_nbr = MPI_PROC_NULL;
 
@@ -97,7 +97,7 @@ char **argv;
 
         /* Reduce partial results stored in diffnorm by adding them.
            Leave final value in variable gdiffnorm in all processes. */
-	MPI_Allreduce( &diffnorm, .....); /* Statement S14 */
+    MPI_Allreduce( &diffnorm, &gdiffnorm, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD ); /* Statement S14 */
 	gdiffnorm = sqrt( gdiffnorm );
 	if (rank == 0) printf( "At iteration %d, diff is %e\n", itcnt, 
 			       gdiffnorm );
@@ -105,9 +105,8 @@ char **argv;
 
     /* Collect into x the data segments distributed (xlocal) and print x. 
        Hint: each process sends its local segment to process 0. */
-    MPI_Gather( xlocal[1], ....., ....,
-		x, maxn * (maxn/size), ...., 
-		..., MPI_COMM_WORLD ); /* Statement S15 */
+    MPI_Gather( xlocal[1], maxn * (maxn/size), MPI_DOUBLE,
+               		x, maxn * (maxn/size), MPI_DOUBLE, 0, MPI_COMM_WORLD ); /* Statement S15 */
     if (rank == 0) {
 	printf( "Final solution is\n" );
 	for (i=0; i<maxn; i++) {
