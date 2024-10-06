@@ -19,7 +19,7 @@
 /* Adjust number of rows per process. */
 int getRowCount(int rowsTotal, int mpiRank, int mpiSize) {
     /* Adjust slack of rows in case rowsTotal is not exactly divisible */
-    return (rowsTotal / mpiSize) + ...... ; /* Statement S21 */
+    return (rowsTotal / mpiSize) + (rowsTotal % mpiSize > mpiRank); /* Statement S21 */
 }
 
 
@@ -51,7 +51,7 @@ char **argv;
     i_first = 1;
     /* Remove restriction to have maxn as multiple of P */
        // This was previously fixed: i_last  = maxn/size;
-    nrows  = getRowCount(maxn, , ); /* Statement S22 */
+    nrows = getRowCount(maxn, rank, size); /* Statement S22 */
     i_last  = nrows;
     if (rank == 0)        i_first++;
     if (rank == size - 1) i_last--;
@@ -130,18 +130,15 @@ char **argv;
          lcnt = maxn * (maxn / size);
        Adjusted to account for any number of rows in different processes */
     lcnt = maxn * nrows; /* Total number of values in local segment */
-    /* Inform the master process of the number of values in local segment */ 
-    MPI_Gather( &lcnt,  ,   , recvcnts, 1, MPI_INT, 0 ,
-                MPI_COMM_WORLD ); /* Statement S23 */
+    /* Inform the master process of the number of values in local segment */
+    MPI_Gather( &lcnt, 1, MPI_INT, recvcnts, 1, MPI_INT, 0, MPI_COMM_WORLD ); /* Statement S23 */
     /* Form the displacements using the recv counts just obtained */
     displs[0] = 0;
     for (i=1; i<size; i++) 
 	displs[i] = displs[i-1] + recvcnts[i-1];
 
     /* Now gather with proper amount of values (lcnt) from each process */
-    MPI_Gatherv( xlocal[1],   , MPI_DOUBLE,
-		x,    , displs, MPI_DOUBLE, 
-		0, MPI_COMM_WORLD ); /* Statement S24 */
+    MPI_Gatherv( xlocal[1], lcnt, MPI_DOUBLE, x, recvcnts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD ); /* Statement S24 */
     if (rank == 0) {
 #if _DEBUG == 1
         for (i=0; i<size; i++) 
