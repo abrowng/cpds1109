@@ -75,9 +75,9 @@ char **argv;
                                &&
        Receive from next process and store row in last row in xlocal
        (ghost area) unless I'm the last process */
-    MPI_Sendrecv( xlocal[1],   ,   , prev_nbr, 1, 
-		  xlocal[maxn/size+1],   ,   , next_nbr, 1, 
-		    ,   status );   /* Statement S12 */
+    MPI_Sendrecv( xlocal[1], maxn, MPI_DOUBLE, prev_nbr, 1,
+                 		  xlocal[maxn/size+1], maxn, MPI_DOUBLE, next_nbr, 1,
+                 		  MPI_COMM_WORLD, &status ); /* Statement S12 */
 
     /* Check that we have the correct results */
     errcnt = 0;

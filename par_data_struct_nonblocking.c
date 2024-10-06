@@ -59,24 +59,24 @@ char **argv;
     /* Send last local row to next process (to process with identifier rank+1)
        unless I'm the last one (process with identifier size-1). */
     nreq = 0;
-    if (rank < size - 1) 
-	MPI_Isend(         ,     , MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD,
-                  &r[nreq++] ); /* Statement S7 */
+    if (rank < size - 1)
+      MPI_Isend( xlocal[maxn/size], maxn, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD,
+				  &r[nreq++] ); /* Statement S7 */
     /* Receive from previous unless I'm the first process (rank==0)
        and store row in initial row (ghost area) */
     if (rank > 0)
-	MPI_Irecv(         ,     , MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, 
-		  &r[nreq++] ); /* Statement S8 */
+      MPI_Irecv( xlocal[0], maxn , MPI_DOUBLE , rank - 1, 0, MPI_COMM_WORLD,
+				  &r[nreq++] ); /* Statement S8 */
 
     /* Send 1st local row to previous process unless I'm the 1st process */
-    if (rank > 0) 
-	MPI_Isend(         ,     , MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD,
-		  &r[nreq++] ); /* Statement S9 */
+    if (rank > 0)
+      MPI_Isend( xlocal[1], maxn, MPI_DOUBLE, rank - 1, 1, MPI_COMM_WORLD,
+                		  &r[nreq++] ); /* Statement S9 */
     /* Receive from next process and store row in last row in xlocal
        (ghost area) unless I'm the last process */
-    if (rank < size - 1) 
-	MPI_Irecv(         ,     , MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD,
-                             ); /* Statement S10 */
+    if (rank < size - 1)
+      MPI_Irecv( xlocal[maxn/size+1], maxn, MPI_DOUBLE, rank + 1, 1, MPI_COMM_WORLD,
+						  &r[nreq++] ); /* Statement S10 */
 
     /* Wait for all four requests with a single call */
     MPI_Waitall( nreq, r, statuses );
@@ -95,8 +95,7 @@ char **argv;
     }
 
     /* Retrieve in process 0 the total number of errors */
-    MPI_Reduce(    ,    , 1, MPI_INT, MPI_SUM, 0,
-               MPI_COMM_WORLD); /* Statement S11 */
+    MPI_Reduce( &errcnt, &toterr, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD );
 
     if (rank == 0) {
 	if (toterr)
