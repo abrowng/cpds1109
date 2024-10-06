@@ -91,7 +91,7 @@ char **argv;
 	          &r[1] );
 	
 	/* Make sure we do NOT use row xlocal[0] before it is received */
-	MPI_Wait( &r[2], status ); /* Statement S16 (Fix the error) */
+    MPI_Wait( &r[2], &status ); /* Statement S16 */
 	/* Compute new values (but not on boundary) */
 	itcnt ++;
 	diffnorm = 0.0;
@@ -109,7 +109,7 @@ char **argv;
            the last 2 rows. Synchronize at once with 2 communication requests:
                - r[0]: sending last local row xlocal[maxn/size]
 	       - r[1]: receiving ghost row and storing in xlocal[maxn/size+1] */
-	MPI_Waitall( nreq,  ,        ); /* Statement S17 */
+    MPI_Waitall( 2, r, statuses ); /* Statement S17 */
 	for (j=1; j<maxn-1; j++) {
 		xnew[i][j] = (xlocal[i][j+1] + xlocal[i][j-1] +
 			      xlocal[i+1][j] + xlocal[i-1][j]) / 4.0;
@@ -118,7 +118,7 @@ char **argv;
 	}
 
 	/* Make sure we do not overwrite row xlocal[1] before it is sent */
-	MPI_Wait( &r[ ], &status ); /* Statement S18 */
+    MPI_Wait( &r[3], &status ); /* Statement S18 */
 	/* Only transfer the interior points */
 	for (i=i_first; i<=i_last; i++) 
 	    for (j=1; j<maxn-1; j++) 
@@ -126,8 +126,8 @@ char **argv;
 
         /* Reduce partial results stored in diffnorm by adding them.
            Leave final value in variable gdiffnorm in all processes. */
-	MPI_Iallreduce(    , &gdiffnorm, 1, MPI_DOUBLE, MPI_SUM,
-		       MPI_COMM_WORLD, &r[ ] ); /* Statement S19 */
+	MPI_Iallreduce( &diffnorm, &gdiffnorm, 1, MPI_DOUBLE, MPI_SUM,
+		       MPI_COMM_WORLD, &r[0] ); /* Statement S19 */
 	MPI_Wait( &r[0], &status ); /* Wait for the MPI_Iallreduce */
 	gdiffnorm = sqrt( gdiffnorm );
 	if (rank == 0) printf( "At iteration %d, diff is %e\n", itcnt, 
@@ -137,9 +137,8 @@ char **argv;
     /* Collect into x the data segments distributed (xlocal) and print x. 
        Hint: each process sends its local segment (not the ghost areas)
              to process 0. */
-    MPI_Igather(     , maxn * (maxn/size),MPI_DOUBLE,
-		x, maxn * (maxn/size), MPI_DOUBLE, 
-		0, MPI_COMM_WORLD, &r[ ] ); /* Statement S20 */
+    MPI_Igather( xlocal[1], maxn * (maxn/size), MPI_DOUBLE,
+                		x, maxn * (maxn/size), MPI_DOUBLE, 0, MPI_COMM_WORLD, &r[0] ); /* Statement S20 */
     MPI_Wait( &r[0], &status ); /* Wait for the MPI_Igather */
     if (rank == 0) {
 	printf( "Final solution is\n" );
